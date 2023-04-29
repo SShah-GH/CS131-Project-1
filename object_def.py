@@ -15,9 +15,17 @@ class ObjectDefinition:
     def add_method(self, method):
         self.obj_methods[method.method_name] = method
 
-    def run_method(self, method_name):
-        # TODO
-        pass
+    # Process method call
+    def call_method(self, method_name, parameters, error_handler):
+        # TODO: check that method exists
+        if method_name not in self.obj_methods:
+            error_handler(ErrorType.NAME_ERROR, "")
+
+        # TODO: check that correct parameters are used (number/type)
+
+        # TODO: call __run_expression with the expression, parameter vals, error_handler
+
+        print(self.obj_methods[method_name])
 
     def __str__(self):
         return "Object Name: {}\n Fields: {}\n Methods: {}".format(self.obj_name, self.obj_fields, self.obj_methods)

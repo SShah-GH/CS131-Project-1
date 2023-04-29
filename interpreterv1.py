@@ -31,6 +31,7 @@ class Interpreter(InterpreterBase):
         main_obj = main_class.instantiate_object()
 
         # Run main method
+        main_obj.call_method("main", [], super().error)
         # TODO
 
     def __parse_all_classes(self, parsed_program):

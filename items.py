@@ -14,4 +14,4 @@ class Method:
         self.expression = expression
 
     def __str__(self):
-        return "Method Name: {}, Parameters: {}, Expression: {}".format(self.name, self.parameters, self.expression)
+        return "Method Name: {}, Parameters: {}, Expression: {}".format(self.method_name, self.parameters, self.expression)
