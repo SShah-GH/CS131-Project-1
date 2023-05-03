@@ -16,7 +16,7 @@ class ObjectDefinition:
         self.obj_methods[method.method_name] = method
 
     # Process method call
-    def call_method(self, method_name, parameters, objects, object_name, error_handler=None, input_handler=None, output_handler=None):
+    def call_method(self, method_name, parameters, objects, object_name, error_handler=None, input_handler=None, output_handler=None, object_handler=None):
         if object_name == "me":
             object = self
         elif object_name in objects:
@@ -42,9 +42,9 @@ class ObjectDefinition:
             parameter_vals[parameter] = parameters[index]
 
         # Execute statement with the given parameters
-        return object.__run_statement(cur_method.statement, parameter_vals, objects, error_handler, input_handler, output_handler)
+        return object.__run_statement(cur_method.statement, parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
 
-    def __run_statement(self, statement, parameter_vals, objects, error_handler=None, input_handler=None, output_handler=None):
+    def __run_statement(self, statement, parameter_vals, objects, error_handler=None, input_handler=None, output_handler=None, object_handler=None):
         # Check if statement is a value
         if not isinstance(statement, list):
             return self.__get_value(statement, parameter_vals)
@@ -54,7 +54,7 @@ class ObjectDefinition:
             output = ""
             for item in statement[1:]:
                 cur_output = str(self.__run_statement(
-                    item, parameter_vals, objects, error_handler, input_handler, output_handler))
+                    item, parameter_vals, objects, error_handler, input_handler, output_handler, object_handler))
 
                 # Remove quotes if needed
                 if cur_output[0] == '"' and cur_output[-1] == '"':
@@ -68,43 +68,58 @@ class ObjectDefinition:
                 statement[1], input_handler(), parameter_vals, error_handler)
         elif statement[0] == "set":
             value = self.__run_statement(
-                statement[2], parameter_vals, objects, error_handler, input_handler, output_handler)
+                statement[2], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
             self.__set_value(
                 statement[1], value, parameter_vals, error_handler)
         # TODO: parameter statements handled correctly?
         elif statement[0] == "call":
             # Evaluate parameters if needed
-            for index, parameter in enumerate(statement[3:]):
+            for index, parameter in enumerate(statement[3:], 3):
                 statement[index] = self.__run_statement(
-                    parameter, parameter_vals, objects, error_handler, input_handler, output_handler)
+                    parameter, parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
 
             return self.call_method(statement[2], statement[3:], objects,
-                                    statement[1], error_handler, input_handler, output_handler)
+                                    statement[1], error_handler, input_handler, output_handler, object_handler)
         elif statement[0] == "while":
-            while self.__evaluate_conditional(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler):
+            while self.__evaluate_conditional(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler):
                 self.__run_statement(
-                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler)
+                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
         elif statement[0] == "if":
-            if self.__evaluate_conditional(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler):
+            if self.__evaluate_conditional(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler):
                 self.__run_statement(
-                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler)
+                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
             elif len(statement) > 3:
                 self.__run_statement(
-                    statement[3], parameter_vals, objects, error_handler, input_handler, output_handler)
+                    statement[3], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
         elif statement[0] == "return":
             # Return nothing
             if len(statement) == 1:
                 return
 
             # Return a value
-            return self.__run_statement(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler)
+            return self.__run_statement(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
         elif statement[0] == "begin":
             for statement in statement[1:]:
                 self.__run_statement(
-                    statement, parameter_vals, objects, error_handler, input_handler, output_handler)
+                    statement, parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
+        elif statement[0] == "new":
+            return object_handler(statement[1])
         else:
-            error_handler(ErrorType.NAME_ERROR, "Invalid statement: {}".format(
-                statement[0]))
+            # TODO: handle boolean unary NOT expression
+            try:
+                operand1 = self.__run_statement(
+                    statement[1], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
+                operand2 = self.__run_statement(
+                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
+                try:
+                  expression = operand1 + statement[0] + operand2
+                except:
+                    print("Error: 1{} 2{} 3{}".format(operand1, statement[0], operand2))
+                print("Expression: {}".format(expression))
+                return eval(expression)
+            except:
+                error_handler(ErrorType.TYPE_ERROR, "Operation failed: {}".format(
+                  expression))
 
     def __get_value(self, name, parameter_vals):
         if name in parameter_vals:
@@ -123,10 +138,10 @@ class ObjectDefinition:
             error_handler(ErrorType.NAME_ERROR, "Variable does not exist: {}".format(
                 name))
 
-    def __evaluate_conditional(self, conditional, parameter_vals, objects, error_handler=None, input_handler=None, output_handler=None):
+    def __evaluate_conditional(self, conditional, parameter_vals, objects, error_handler=None, input_handler=None, output_handler=None, object_handler=None):
         # Evaluate condition
         result = self.__run_statement(
-            conditional, parameter_vals, objects, error_handler, input_handler, output_handler)
+            conditional, parameter_vals, objects, error_handler, input_handler, output_handler, object_handler)
 
         # Check that result is a boolean
         if not isinstance(result, bool):

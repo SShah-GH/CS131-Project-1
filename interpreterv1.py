@@ -24,15 +24,12 @@ class Interpreter(InterpreterBase):
 
         self.__parse_all_classes(parsed_program)
 
-        # Find main class
-        main_class = self.__find_class_def("main")
-
         # Instantiate main
-        main_obj = main_class.instantiate_object()
+        main_obj = self.create_object("main")
 
         # Run main method
         main_obj.call_method("main", [], self.objects, "me", super().error,
-                             super().get_input, super().output)
+                             super().get_input, super().output, self.create_object)
 
     def __parse_all_classes(self, parsed_program):
         # Create class structure of program
@@ -53,8 +50,11 @@ class Interpreter(InterpreterBase):
                 elif item[0] == "method":
                     self.classes[class_name].add_method(item, super().error)
 
-    def __find_class_def(self, class_name):
+    def create_object(self, class_name):
         if class_name not in self.classes:
             super().error(ErrorType.TYPE_ERROR, "")
 
-        return self.classes[class_name]
+        obj_class = self.classes[class_name]
+        object = obj_class.instantiate_object()
+        self.objects[object.obj_name] = object
+        return object
