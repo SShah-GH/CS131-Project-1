@@ -16,21 +16,130 @@ class ObjectDefinition:
         self.obj_methods[method.method_name] = method
 
     # Process method call
-    def call_method(self, method_name, parameters, error_handler):
-        # TODO: check that method exists
-        if method_name not in self.obj_methods:
-            error_handler(ErrorType.NAME_ERROR, "")
+    def call_method(self, method_name, parameters, objects, object_name, error_handler=None, input_handler=None, output_handler=None):
+        if object_name == "me":
+            object = self
+        elif object_name in objects:
+            object = objects[object_name]
+        else:
+            error_handler(ErrorType.FAULT_ERROR, "Object does not exist: {}".format(
+                object_name))
 
-        # TODO: check that correct parameters are used (number/type)
+        # Check that method exists
+        if method_name not in object.obj_methods:
+            error_handler(ErrorType.NAME_ERROR, "Method does not exist: {}".format(
+                method_name))
 
-        # TODO: call __run_expression with the expression, parameter vals, error_handler
+        # Check that correct number of parameters are given
+        cur_method = object.obj_methods[method_name]
+        if len(parameters) != len(cur_method.parameters):
+            error_handler(ErrorType.TYPE_ERROR, "Incorrect number of parameters to: {}".format(
+                method_name))
 
-        print(self.obj_methods[method_name])
+        # Create parameter dict
+        parameter_vals = dict()
+        for index, parameter in enumerate(cur_method.parameters):
+            parameter_vals[parameter] = parameters[index]
+
+        # Execute statement with the given parameters
+        return object.__run_statement(cur_method.statement, parameter_vals, objects, error_handler, input_handler, output_handler)
+
+    def __run_statement(self, statement, parameter_vals, objects, error_handler=None, input_handler=None, output_handler=None):
+        # Check if statement is a value
+        if not isinstance(statement, list):
+            return self.__get_value(statement, parameter_vals)
+
+        # Execute statements
+        if statement[0] == "print":
+            output = ""
+            for item in statement[1:]:
+                cur_output = str(self.__run_statement(
+                    item, parameter_vals, objects, error_handler, input_handler, output_handler))
+
+                # Remove quotes if needed
+                if cur_output[0] == '"' and cur_output[-1] == '"':
+                    cur_output = cur_output[1:-1]
+
+                output += cur_output
+            output_handler(output)
+        # TODO: check if different handling needed for int vs string
+        elif statement[0] == "inputi" or statement[0] == "inputs":
+            self.__set_value(
+                statement[1], input_handler(), parameter_vals, error_handler)
+        elif statement[0] == "set":
+            value = self.__run_statement(
+                statement[2], parameter_vals, objects, error_handler, input_handler, output_handler)
+            self.__set_value(
+                statement[1], value, parameter_vals, error_handler)
+        # TODO: parameter statements handled correctly?
+        elif statement[0] == "call":
+            # Evaluate parameters if needed
+            for index, parameter in enumerate(statement[3:]):
+                statement[index] = self.__run_statement(
+                    parameter, parameter_vals, objects, error_handler, input_handler, output_handler)
+
+            return self.call_method(statement[2], statement[3:], objects,
+                                    statement[1], error_handler, input_handler, output_handler)
+        elif statement[0] == "while":
+            while self.__evaluate_conditional(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler):
+                self.__run_statement(
+                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler)
+        elif statement[0] == "if":
+            if self.__evaluate_conditional(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler):
+                self.__run_statement(
+                    statement[2], parameter_vals, objects, error_handler, input_handler, output_handler)
+            elif len(statement) > 3:
+                self.__run_statement(
+                    statement[3], parameter_vals, objects, error_handler, input_handler, output_handler)
+        elif statement[0] == "return":
+            # Return nothing
+            if len(statement) == 1:
+                return
+
+            # Return a value
+            return self.__run_statement(statement[1], parameter_vals, objects, error_handler, input_handler, output_handler)
+        elif statement[0] == "begin":
+            for statement in statement[1:]:
+                self.__run_statement(
+                    statement, parameter_vals, objects, error_handler, input_handler, output_handler)
+        else:
+            error_handler(ErrorType.NAME_ERROR, "Invalid statement: {}".format(
+                statement[0]))
+
+    def __get_value(self, name, parameter_vals):
+        if name in parameter_vals:
+            return parameter_vals[name]
+        elif name in self.obj_fields:
+            return self.obj_fields[name].value
+        else:
+            return name
+
+    def __set_value(self, name, value, parameter_vals, error_handler=None):
+        if name in parameter_vals:
+            parameter_vals[name] = value
+        elif name in self.obj_fields:
+            self.obj_fields[name].value = value
+        else:
+            error_handler(ErrorType.NAME_ERROR, "Variable does not exist: {}".format(
+                name))
+
+    def __evaluate_conditional(self, conditional, parameter_vals, objects, error_handler=None, input_handler=None, output_handler=None):
+        # Evaluate condition
+        result = self.__run_statement(
+            conditional, parameter_vals, objects, error_handler, input_handler, output_handler)
+
+        # Check that result is a boolean
+        if not isinstance(result, bool):
+            error_handler(ErrorType.TYPE_ERROR, "Value is not a boolean: {}".format(
+                result))
+
+        return result
 
     def __str__(self):
         return "Object Name: {}\n Fields: {}\n Methods: {}".format(self.obj_name, self.obj_fields, self.obj_methods)
 
 
+# TODO: handle new keyword and expressions
 '''
   # Interpret the specified method using the provided parameters    
   def call_method(self, method_name, parameters):

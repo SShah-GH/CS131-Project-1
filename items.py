@@ -4,14 +4,14 @@ class Field:
         self.value = value
 
     def __str__(self):
-        return "Field Name: {}, Value: {}\n Expression: {}".format(self.name, self.value)
+        return "Field Name: {}, Value: {}\n".format(self.name, self.value)
 
 
 class Method:
-    def __init__(self, method_name, parameters, expression):
+    def __init__(self, method_name, parameters, statement):
         self.method_name = method_name
         self.parameters = parameters
-        self.expression = expression
+        self.statement = statement
 
     def __str__(self):
-        return "Method Name: {}, Parameters: {}, Expression: {}".format(self.method_name, self.parameters, self.expression)
+        return "Method Name: {}, Parameters: {}, Statement: {}\n".format(self.method_name, self.parameters, self.statement)

@@ -16,7 +16,7 @@ class Interpreter(InterpreterBase):
     def run(self, program):
         # Parse program with given BParser
         result, parsed_program = BParser.parse(program)
-        # super().output(parsed_program)
+        print(parsed_program)
 
         # Error case
         if result == False:
@@ -31,8 +31,8 @@ class Interpreter(InterpreterBase):
         main_obj = main_class.instantiate_object()
 
         # Run main method
-        main_obj.call_method("main", [], super().error)
-        # TODO
+        main_obj.call_method("main", [], self.objects, "me", super().error,
+                             super().get_input, super().output)
 
     def __parse_all_classes(self, parsed_program):
         # Create class structure of program
@@ -54,4 +54,7 @@ class Interpreter(InterpreterBase):
                     self.classes[class_name].add_method(item, super().error)
 
     def __find_class_def(self, class_name):
+        if class_name not in self.classes:
+            super().error(ErrorType.TYPE_ERROR, "")
+
         return self.classes[class_name]
