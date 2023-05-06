@@ -4,8 +4,7 @@ from items import *
 
 class ObjectDefinition:
     # ObjectDefinition constructor
-    def __init__(self, obj_name="main"):
-        self.obj_name = obj_name
+    def __init__(self):
         self.obj_fields = dict()
         self.obj_methods = dict()
 
@@ -49,8 +48,8 @@ class ObjectDefinition:
     def call_method(self, method_name, parameters, object_name, interpreter):
         if object_name == "me":
             object = self
-        elif object_name in interpreter.objects:
-            object = interpreter.objects[object_name]
+        elif object_name in self.obj_fields and isinstance(self.obj_fields[object_name].value, ObjectDefinition):
+            object = self.obj_fields[object_name].value
         else:
             interpreter.error(ErrorType.FAULT_ERROR, "Object does not exist: {}".format(
                 object_name))
@@ -73,8 +72,6 @@ class ObjectDefinition:
 
         # Execute statement with the given parameters
         result, ret_flag =  object.__run_statement(cur_method.statement, parameter_vals, interpreter)
-        print(result)
-        print(ret_flag)
         return result
 
     def __run_statement(self, statement, parameter_vals,  interpreter):
@@ -355,4 +352,4 @@ class ObjectDefinition:
                         expression[0], operand))
 
     def __str__(self):
-        return "Object Name: {}\n Fields: {}\n Methods: {}".format(self.obj_name, self.obj_fields, self.obj_methods)
+        return "Fields: {}\n Methods: {}".format(self.obj_fields, self.obj_methods)

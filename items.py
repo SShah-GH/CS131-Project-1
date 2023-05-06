@@ -4,7 +4,7 @@ class Field:
         self.value = value
 
     def __str__(self):
-        return "Field Name: {}, Value: {}\n".format(self.name, self.value)
+        return "Field Name: {}, Value: {}\n".format(self.field_name, self.value)
 
 
 class Method:

@@ -55,5 +55,4 @@ class Interpreter(InterpreterBase):
 
         obj_class = self.classes[class_name]
         object = obj_class.instantiate_object()
-        self.objects[object.obj_name] = object
         return object
