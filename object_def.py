@@ -45,11 +45,13 @@ class ObjectDefinition:
                 name))
 
     # Process method call
-    def call_method(self, method_name, parameters, object_name, interpreter):
+    def call_method(self, method_name, parameters, object_name, interpreter, existing_parameter_vals=dict()):
         if object_name == "me":
             object = self
         elif object_name in self.obj_fields and isinstance(self.obj_fields[object_name].value, ObjectDefinition):
             object = self.obj_fields[object_name].value
+        elif object_name in existing_parameter_vals and isinstance(existing_parameter_vals[object_name], ObjectDefinition):
+            object = existing_parameter_vals[object_name]
         else:
             interpreter.error(ErrorType.FAULT_ERROR, "Object does not exist: {}".format(
                 object_name))
@@ -71,7 +73,8 @@ class ObjectDefinition:
             parameter_vals[parameter] = parameters[index]
 
         # Execute statement with the given parameters
-        result, ret_flag =  object.__run_statement(cur_method.statement, parameter_vals, interpreter)
+        result, ret_flag = object.__run_statement(
+            cur_method.statement, parameter_vals, interpreter)
         return result
 
     def __run_statement(self, statement, parameter_vals,  interpreter):
@@ -135,7 +138,7 @@ class ObjectDefinition:
                     parameter, parameter_vals,  interpreter)
 
             result = self.call_method(statement[2], parameters,
-                                    statement[1], interpreter)
+                                      statement[1], interpreter, parameter_vals)
             return result, False
         elif statement[0] == "while":
             while self.__evaluate_conditional(statement[1], parameter_vals,  interpreter):
@@ -162,7 +165,8 @@ class ObjectDefinition:
                 return None, True
 
             # Return a value
-            result, ret_flag = self.__run_statement(statement[1], parameter_vals,  interpreter)
+            result, ret_flag = self.__run_statement(
+                statement[1], parameter_vals,  interpreter)
             return result, True
         elif statement[0] == "begin":
             for statement in statement[1:]:
@@ -175,7 +179,7 @@ class ObjectDefinition:
             return interpreter.create_object(statement[1]), False
         else:
             result = self.__evaluate_expression(statement, parameter_vals,
-                                              interpreter)
+                                                interpreter)
             return result, False
 
     def __evaluate_conditional(self, conditional, parameter_vals,  interpreter):
