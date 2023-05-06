@@ -8,7 +8,6 @@ class ObjectDefinition:
         self.obj_name = obj_name
         self.obj_fields = dict()
         self.obj_methods = dict()
-        self.ret = False
 
     def add_field(self, field_name, field_value):
         field_value = self.__get_value(field_value, dict())
@@ -47,11 +46,11 @@ class ObjectDefinition:
                 name))
 
     # Process method call
-    def call_method(self, method_name, parameters, objects, object_name, interpreter):
+    def call_method(self, method_name, parameters, object_name, interpreter):
         if object_name == "me":
             object = self
-        elif object_name in objects:
-            object = objects[object_name]
+        elif object_name in interpreter.objects:
+            object = interpreter.objects[object_name]
         else:
             interpreter.error(ErrorType.FAULT_ERROR, "Object does not exist: {}".format(
                 object_name))
@@ -73,21 +72,24 @@ class ObjectDefinition:
             parameter_vals[parameter] = parameters[index]
 
         # Execute statement with the given parameters
-        return object.__run_statement(cur_method.statement, parameter_vals, objects, interpreter)
+        result, ret_flag =  object.__run_statement(cur_method.statement, parameter_vals, interpreter)
+        print(result)
+        print(ret_flag)
+        return result
 
-    def __run_statement(self, statement, parameter_vals, objects, interpreter):
+    def __run_statement(self, statement, parameter_vals,  interpreter):
         print(statement)
         # Check if statement is a value
         if not isinstance(statement, list):
             result = self.__get_value(statement, parameter_vals, interpreter)
-            return result
+            return result, False
 
         # Execute statements
         if statement[0] == "print":
             output = ""
             for item in statement[1:]:
-                cur_output = self.__run_statement(
-                    item, parameter_vals, objects, interpreter)
+                cur_output, ret_flag = self.__run_statement(
+                    item, parameter_vals,  interpreter)
 
                 # Convert to Brewin type
                 if isinstance(cur_output, bool):
@@ -108,65 +110,81 @@ class ObjectDefinition:
 
                 output += cur_output
             interpreter.output(output)
+            return None, False
         elif statement[0] == "inputi":
             input = interpreter.get_input()
             input = self.__get_value(input, parameter_vals, interpreter)
             self.__set_value(
                 statement[1], input, parameter_vals, interpreter)
+            return None, False
         elif statement[0] == "inputs":
             input = interpreter.get_input()
             input = '"' + input + '"'
             input = self.__get_value(input, parameter_vals, interpreter)
             self.__set_value(statement[1], input,
                              parameter_vals, interpreter)
+            return None, False
         elif statement[0] == "set":
-            value = self.__run_statement(
-                statement[2], parameter_vals, objects, interpreter)
+            value, ret_flag = self.__run_statement(
+                statement[2], parameter_vals,  interpreter)
             self.__set_value(
-                statement[1], value, parameter_vals, interpreter.error)
-        # TODO: parameter statements handled correctly?
+                statement[1], value, parameter_vals, interpreter)
+            return None, False
         elif statement[0] == "call":
             # Evaluate parameters if needed
             parameters = statement[3:]
             for index, parameter in enumerate(parameters):
-                parameters[index] = self.__run_statement(
-                    parameter, parameter_vals, objects, interpreter)
+                parameters[index], ret_flag = self.__run_statement(
+                    parameter, parameter_vals,  interpreter)
 
-            return self.call_method(statement[2], parameters, objects,
+            result = self.call_method(statement[2], parameters,
                                     statement[1], interpreter)
+            return result, False
         elif statement[0] == "while":
-            while self.__evaluate_conditional(statement[1], parameter_vals, objects, interpreter):
-                self.__run_statement(
-                    statement[2], parameter_vals, objects, interpreter)
+            while self.__evaluate_conditional(statement[1], parameter_vals,  interpreter):
+                result, ret_flag = self.__run_statement(
+                    statement[2], parameter_vals,  interpreter)
+                if ret_flag:
+                    return result, True
+            return None, False
         elif statement[0] == "if":
-            # TODO: are you supposed to return here?
-            if self.__evaluate_conditional(statement[1], parameter_vals, objects, interpreter):
-                return self.__run_statement(
-                    statement[2], parameter_vals, objects, interpreter)
+            if self.__evaluate_conditional(statement[1], parameter_vals,  interpreter):
+                result, ret_flag = self.__run_statement(
+                    statement[2], parameter_vals,  interpreter)
+                if ret_flag:
+                    return result, True
             elif len(statement) > 3:
-                return self.__run_statement(
-                    statement[3], parameter_vals, objects, interpreter)
+                result, ret_flag = self.__run_statement(
+                    statement[3], parameter_vals,  interpreter)
+                if ret_flag:
+                    return result, True
+            return None, False
         elif statement[0] == "return":
             # Return nothing
             if len(statement) == 1:
-                return
+                return None, True
 
             # Return a value
-            return self.__run_statement(statement[1], parameter_vals, objects, interpreter)
+            result, ret_flag = self.__run_statement(statement[1], parameter_vals,  interpreter)
+            return result, True
         elif statement[0] == "begin":
             for statement in statement[1:]:
-                self.__run_statement(
-                    statement, parameter_vals, objects, interpreter)
+                result, ret_flag = self.__run_statement(
+                    statement, parameter_vals,  interpreter)
+                if ret_flag:
+                    return result, True
+            return None, False
         elif statement[0] == "new":
-            return interpreter.create_object(statement[1])
+            return interpreter.create_object(statement[1]), False
         else:
-            return self.__evaluate_expression(statement, parameter_vals, objects,
+            result = self.__evaluate_expression(statement, parameter_vals,
                                               interpreter)
+            return result, False
 
-    def __evaluate_conditional(self, conditional, parameter_vals, objects, interpreter):
+    def __evaluate_conditional(self, conditional, parameter_vals,  interpreter):
         # Evaluate condition
-        result = self.__run_statement(
-            conditional, parameter_vals, objects, interpreter)
+        result, ret_flag = self.__run_statement(
+            conditional, parameter_vals,  interpreter)
 
         # Check that result is a boolean
         if not isinstance(result, bool):
@@ -175,16 +193,16 @@ class ObjectDefinition:
 
         return result
 
-    def __evaluate_expression(self, expression, parameter_vals, objects, interpreter):
+    def __evaluate_expression(self, expression, parameter_vals,  interpreter):
         # Get operands
         if len(expression) == 2:
-            operand = self.__run_statement(
-                expression[1], parameter_vals, objects, interpreter)
+            operand, ret_flag = self.__run_statement(
+                expression[1], parameter_vals,  interpreter)
         else:
-            operand1 = self.__run_statement(
-                expression[1], parameter_vals, objects, interpreter)
-            operand2 = self.__run_statement(
-                expression[2], parameter_vals, objects, interpreter)
+            operand1, ret_flag = self.__run_statement(
+                expression[1], parameter_vals,  interpreter)
+            operand2, ret_flag = self.__run_statement(
+                expression[2], parameter_vals,  interpreter)
 
         match expression[0]:
             case '+':

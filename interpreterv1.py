@@ -28,7 +28,7 @@ class Interpreter(InterpreterBase):
         main_obj = self.create_object("main")
 
         # Run main method
-        main_obj.call_method("main", [], self.objects, "me", self)
+        main_obj.call_method("main", [], "me", self)
 
     def __parse_all_classes(self, parsed_program):
         # Create class structure of program
