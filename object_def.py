@@ -81,7 +81,6 @@ class ObjectDefinition:
         return result
 
     def __run_statement(self, statement, parameter_vals,  interpreter):
-        print(statement)
         # Check if statement is a value
         if not isinstance(statement, list):
             result = self.__get_value(statement, parameter_vals, interpreter)

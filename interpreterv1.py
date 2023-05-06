@@ -16,7 +16,6 @@ class Interpreter(InterpreterBase):
     def run(self, program):
         # Parse program with given BParser
         result, parsed_program = BParser.parse(program)
-        print(parsed_program)
 
         # Error case
         if result == False:
