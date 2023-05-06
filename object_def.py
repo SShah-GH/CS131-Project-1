@@ -46,7 +46,10 @@ class ObjectDefinition:
 
     # Process method call
     def call_method(self, method_name, parameters, object_name, interpreter, existing_parameter_vals=dict()):
-        if object_name == "me":
+        # TODO: allowing object_name to be a pointer is a jank solution
+        if isinstance(object_name, ObjectDefinition):
+            object = object_name
+        elif object_name == "me":
             object = self
         elif object_name in existing_parameter_vals and isinstance(existing_parameter_vals[object_name], ObjectDefinition):
             object = existing_parameter_vals[object_name]
@@ -137,8 +140,15 @@ class ObjectDefinition:
                 parameters[index], ret_flag = self.__run_statement(
                     parameter, parameter_vals,  interpreter)
 
+            # Evaluate object name if needed
+            if isinstance(statement[1], list):
+                object_name, ret_flag = self.__run_statement(
+                    statement[1], parameter_vals,  interpreter)
+            else:
+                object_name = statement[1]
+            
             result = self.call_method(statement[2], parameters,
-                                      statement[1], interpreter, parameter_vals)
+                                      object_name, interpreter, parameter_vals)
             return result, False
         elif statement[0] == "while":
             while self.__evaluate_conditional(statement[1], parameter_vals,  interpreter):
