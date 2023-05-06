@@ -48,10 +48,10 @@ class ObjectDefinition:
     def call_method(self, method_name, parameters, object_name, interpreter, existing_parameter_vals=dict()):
         if object_name == "me":
             object = self
-        elif object_name in self.obj_fields and isinstance(self.obj_fields[object_name].value, ObjectDefinition):
-            object = self.obj_fields[object_name].value
         elif object_name in existing_parameter_vals and isinstance(existing_parameter_vals[object_name], ObjectDefinition):
             object = existing_parameter_vals[object_name]
+        elif object_name in self.obj_fields and isinstance(self.obj_fields[object_name].value, ObjectDefinition):
+            object = self.obj_fields[object_name].value
         else:
             interpreter.error(ErrorType.FAULT_ERROR, "Object does not exist: {}".format(
                 object_name))
